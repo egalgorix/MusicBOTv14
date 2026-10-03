@@ -14,9 +14,9 @@
     "dataerror": "Bir veri hatası oluştu. Lütfen tekrar dene.",
     "onlyuser": "Bu düğmeyi yalnızca çalmayı başlatan kişi kullanabilir.",
     "volumeinvalid": "1 ile 100 arasında bir tam sayı yaz.",
-    "agerestricted": "Bu video yaş kısıtlı veya kullanılamıyor. NSFW kanal kullan ya da YOUTUBE_COOKIE ekle.",
-    "ytbotcheck": "YouTube akışı bot kontrolüne takıldı. Bu, 2023'te başlayan kırılma. Giriş yapılmış bir YOUTUBE_COOKIE ekleyip yeniden başlat.",
-    "ytratelimit": "YouTube bu sunucuyu sınırladı. Birkaç dakika bekle ya da YOUTUBE_COOKIE ekle.",
+    "agerestricted": "Bu video yaş kısıtlı veya kullanılamıyor. Başka bir link dene.",
+    "ytbotcheck": "YouTube bu videoyu vermedi. Şarkı adını veya başka bir linki dene.",
+    "ytratelimit": "YouTube şu an meşgul. Bir dakika bekleyip tekrar dene.",
     "ffmpeg": "FFmpeg yok. Kur ya da FFMPEG_PATH ayarla.",
     "unknowncommand": "Bilinmeyen komut.",
     "commandfailed": "Komut çalışmadı."
@@ -55,5 +55,23 @@
     "empty_desc": "Herkes çıktı, ben de kanaldan ayrıldım.",
     "standard": "Kapalı",
     "unknown": "Bilinmiyor"
+  },
+  "help": {
+    "title": "Komutlar",
+    "intro": "Başka bir anahtar yok. Ses kanalına gir, şarkı adı veya YouTube linki yaz.",
+    "usage": "Örnek",
+    "examples": "`/play Duman Senden Daha Güzel`\n`/play https://youtu.be/dQw4w9WgXcQ`\n`/play https://www.youtube.com/playlist?list=...`",
+    "buttons": "Çalma kartındaki 🔊 sesi ayarlar, 🌀 şarkıyı döngüye alır.",
+    "commands": {
+      "play": "Şarkı adı, YouTube videosu, Shorts veya çalma listesi linki çalar.",
+      "pause": "Çalan şarkıyı duraklatır.",
+      "resume": "Duraklatılan şarkıyı sürdürür.",
+      "skip": "Sıradaki şarkıya geçer.",
+      "stop": "Çalmayı bitirir ve kuyruğu temizler.",
+      "list": "Kuyruğu gösterir.",
+      "nowplaying": "Şu an çalan şarkıyı gösterir.",
+      "ping": "Gecikmeyi gösterir.",
+      "help": "Bu listeyi gösterir."
+    }
   }
 }

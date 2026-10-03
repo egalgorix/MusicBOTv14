@@ -18,6 +18,7 @@ module.exports = function loadCommands(client) {
     payload.push({
       name: command.name,
       description: String(command.description || "Music command").slice(0, 100),
+      descriptionLocalizations: command.descriptionLocalizations,
       options: command.options,
       dmPermission: false,
       contexts: [InteractionContextType.Guild],

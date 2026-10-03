@@ -9,7 +9,7 @@ const { generateDependencyReport } = require("@discordjs/voice");
 
 const { initI18n } = require("../lib/i18n");
 const { resolveFfmpegPath } = require("../lib/ffmpeg");
-const { YouTubePlugin, parseYouTubeUrl, classifyYouTubeError } = require("../plugins/youtube");
+const { YouTubePlugin, parseYouTubeUrl, extractPlayable, classifyYouTubeError } = require("../plugins/youtube");
 const { DirectPlugin } = require("../plugins/direct");
 const config = require("../config");
 
@@ -84,7 +84,10 @@ async function main() {
   for (const lng of ["en-US", "tr", "fr"]) {
     const text = t("error.nosonglist", { ns: "common", lng });
     check(`i18n ${lng}`, text && !text.startsWith("error."), text);
-    check(`i18n bot-check ${lng}`, !t("error.ytbotcheck", { ns: "common", lng }).includes("ytbotcheck"));
+    const botCheck = t("error.ytbotcheck", { ns: "common", lng });
+    check(`i18n bot-check ${lng}`, botCheck && !/ytbotcheck|YOUTUBE_COOKIE/i.test(botCheck), botCheck);
+    const help = t("help.commands.play", { ns: "common", lng });
+    check(`help ${lng}`, help && !help.startsWith("help."), help);
   }
   check(
     "english resume string",
@@ -111,6 +114,17 @@ async function main() {
     "bot-check classifier",
     classifyYouTubeError(new Error("Sign in to confirm you're not a bot")) === "YT_BOT_CHECK"
   );
+  const extracts = [
+    ["https://youtu.be/dQw4w9WgXcQ", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+    ["şunu çal https://www.youtube.com/watch?v=dQw4w9WgXcQ lütfen", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+    ["bak https://youtube.com/shorts/dQw4w9WgXcQ.", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+    ["youtu.be/dQw4w9WgXcQ dinle", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+    ["https://www.youtube.com/playlist?list=PLtest", "https://www.youtube.com/playlist?list=PLtest"],
+    ["Duman Senden Daha Güzel", "Duman Senden Daha Güzel"],
+  ];
+  for (const [input, expected] of extracts) {
+    check(`extract ${input}`, extractPlayable(input) === expected, extractPlayable(input));
+  }
 
   const commands = fs.readdirSync(path.join(__dirname, "..", "commands")).filter((file) => file.endsWith(".js"));
   check("commands present", commands.length >= 8, String(commands.length));
@@ -181,15 +195,19 @@ async function main() {
 
   check("placeholder token is not treated as real", config.hasToken === false || Boolean(process.env.DISCORD_TOKEN));
   const indexSource = fs.readFileSync(path.join(__dirname, "..", "index.js"), "utf8");
-  check("no deprecated mongoose flags", !indexSource.includes("useNewUrlParser") && !indexSource.includes(".remove("));
+  const youtubeSource = fs.readFileSync(path.join(__dirname, "..", "plugins", "youtube.js"), "utf8");
+  check("no mongoose", !indexSource.includes("mongoose") && !fs.existsSync(path.join(__dirname, "..", "models", "music.js")));
+  check("no extra token prompts", !/YOUTUBE_COOKIE|SPOTIFY_CLIENT|MONGO/.test(indexSource + youtubeSource));
   const pkg = require("../package.json");
   check(
     "package dropped broken extractors",
     !pkg.dependencies["@distube/ytdl-core"] &&
       !pkg.dependencies["discord-player"] &&
       !pkg.dependencies["@distube/yt-dlp"] &&
-      !pkg.dependencies["ffmpeg-static"]
+      !pkg.dependencies["ffmpeg-static"] &&
+      !pkg.dependencies.mongoose
   );
+  check("help command", commands.includes("help.js"));
   require("../index");
   check("index module loads", true);
 

@@ -12,7 +12,6 @@ function startHealthServer(client, config) {
       ready: Boolean(user),
       username: user?.username || null,
       guilds: client.guilds?.cache?.size || 0,
-      mongo: Boolean(client.mongoReady),
       uptime: Math.round(process.uptime()),
     };
     if (req.accepts(["html", "json"]) === "html") {
@@ -25,7 +24,7 @@ function startHealthServer(client, config) {
 <main style="max-width:40rem;margin:4rem auto;padding:0 1.25rem">
   <p style="letter-spacing:.16em;text-transform:uppercase;color:#d4a017">FastUptime</p>
   <h1 style="font-weight:500;font-size:2.4rem;margin:.2rem 0 1rem">Music bot is ${body.ready ? "online" : "starting"}</h1>
-  <p style="line-height:1.5;color:#c8c2b4">YouTube playback no longer depends on ytdl-core. Voice uses Discord's current DAVE encryption. This page is only a health check.</p>
+  <p style="line-height:1.5;color:#c8c2b4">Only a Discord token is required. Paste a song name or a YouTube link. This page is a health check.</p>
   <pre style="background:#1c2029;padding:1rem;border-radius:12px;overflow:auto">${JSON.stringify(body, null, 2)}</pre>
 </main>
 </body>

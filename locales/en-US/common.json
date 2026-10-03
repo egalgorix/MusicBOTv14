@@ -14,9 +14,9 @@
     "dataerror": "A data error occurred. Please try again.",
     "onlyuser": "Only the person who started playback can use this button.",
     "volumeinvalid": "Give me a whole number from 1 to 100.",
-    "agerestricted": "That video is age-restricted or unavailable. Use an NSFW channel, or set YOUTUBE_COOKIE.",
-    "ytbotcheck": "YouTube blocked the stream with a bot check. This is the break that started in 2023. Add a logged-in YOUTUBE_COOKIE and restart.",
-    "ytratelimit": "YouTube rate-limited this server. Wait a few minutes or add YOUTUBE_COOKIE.",
+    "agerestricted": "That video is age-restricted or unavailable. Try another link.",
+    "ytbotcheck": "YouTube refused this video. Try the song name or another link.",
+    "ytratelimit": "YouTube is busy right now. Wait a minute and try again.",
     "ffmpeg": "FFmpeg is missing. Install it or set FFMPEG_PATH.",
     "unknowncommand": "Unknown command.",
     "commandfailed": "Command failed."
@@ -55,5 +55,23 @@
     "empty_desc": "Everyone left, so I left the channel.",
     "standard": "Off",
     "unknown": "Unknown"
+  },
+  "help": {
+    "title": "Commands",
+    "intro": "Nothing else to set up. Join a voice channel and send a song name or a YouTube link.",
+    "usage": "Examples",
+    "examples": "`/play Duman Senden Daha Güzel`\n`/play https://youtu.be/dQw4w9WgXcQ`\n`/play https://www.youtube.com/playlist?list=...`",
+    "buttons": "On the player card, 🔊 sets the volume and 🌀 loops the song.",
+    "commands": {
+      "play": "Plays a song name, a YouTube video, a Short, or a playlist link.",
+      "pause": "Pauses the current song.",
+      "resume": "Resumes the paused song.",
+      "skip": "Skips to the next song.",
+      "stop": "Stops playback and clears the queue.",
+      "list": "Shows the queue.",
+      "nowplaying": "Shows the song that is playing.",
+      "ping": "Shows latency.",
+      "help": "Shows this list."
+    }
   }
 }

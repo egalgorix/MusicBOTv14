@@ -41,6 +41,28 @@ function parseViews(value) {
   return Math.round(amount * multiplier);
 }
 
+function canonicalYouTube(parsed) {
+  if (!parsed) return null;
+  if (parsed.type === "playlist") return `https://www.youtube.com/playlist?list=${encodeURIComponent(parsed.id)}`;
+  return `https://www.youtube.com/watch?v=${parsed.id}`;
+}
+
+function extractPlayable(input) {
+  const trimmed = String(input || "").trim();
+  const whole = parseYouTubeUrl(trimmed);
+  if (whole) return canonicalYouTube(whole);
+  const candidates = [
+    ...(trimmed.match(/https?:\/\/[^\s<>]+/gi) || []),
+    ...(trimmed.match(/(?:www\.|m\.|music\.)?(?:youtube\.com|youtube-nocookie\.com)\/[^\s<>]+|youtu\.be\/[\w-]+/gi) || []),
+  ];
+  for (const raw of candidates) {
+    const cleaned = raw.replace(/[)\].,!?>]+$/g, "");
+    const parsed = parseYouTubeUrl(/^https?:\/\//i.test(cleaned) ? cleaned : `https://${cleaned}`);
+    if (parsed) return canonicalYouTube(parsed);
+  }
+  return trimmed;
+}
+
 function parseYouTubeUrl(input) {
   if (!input || typeof input !== "string") return null;
   const trimmed = input.trim();
@@ -147,35 +169,17 @@ class YouTubePlugin extends ExtractorPlugin {
   }
 
   clientOrder() {
-    const requested = String(this.options.client || process.env.YOUTUBE_CLIENT || "WEB")
-      .trim()
-      .toUpperCase()
-      .replace("-", "_");
-    const names = [requested, "WEB", "ANDROID", "IOS", "TV_EMBEDDED", "TV"];
-    const clients = [];
-    for (const name of names) {
-      const client = CLIENTS[name];
-      if (client && !clients.includes(client)) clients.push(client);
-    }
-    return clients;
+    return [CLIENTS.WEB, CLIENTS.ANDROID, CLIENTS.IOS, CLIENTS.TV_EMBEDDED, CLIENTS.TV];
   }
 
   sessionOptions() {
-    const options = {
+    return {
       generate_session_locally: true,
       retrieve_player: true,
       lang: "en",
       location: "US",
+      client_type: CLIENTS.WEB,
     };
-    const cookie = this.options.cookie || process.env.YOUTUBE_COOKIE;
-    const poToken = this.options.poToken || process.env.YOUTUBE_PO_TOKEN;
-    const playerId = this.options.playerId || process.env.YOUTUBE_PLAYER_ID;
-    if (cookie) options.cookie = cookie;
-    if (poToken) options.po_token = poToken;
-    if (playerId) options.player_id = playerId;
-    const client = this.clientOrder()[0];
-    if (client) options.client_type = client;
-    return options;
   }
 
   async ensureSession() {
@@ -237,9 +241,7 @@ class YouTubePlugin extends ExtractorPlugin {
     if (!id) throw new DisTubeError("CANNOT_RESOLVE_SONG", "youtube");
     const status = info.playability_status?.status;
     if (status === "LOGIN_REQUIRED") {
-      const error = new Error(
-        "YouTube asked the bot to sign in. Set YOUTUBE_COOKIE. This check started breaking extractors in 2023."
-      );
+      const error = new Error("YouTube refused this video. Try the song name or another link.");
       error.code = "YT_BOT_CHECK";
       error.errorCode = "YT_BOT_CHECK";
       throw error;
@@ -428,6 +430,8 @@ class YouTubePlugin extends ExtractorPlugin {
 module.exports = {
   YouTubePlugin,
   parseYouTubeUrl,
+  extractPlayable,
+  canonicalYouTube,
   classifyYouTubeError,
   textOf,
   parseViews,

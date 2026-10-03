@@ -14,9 +14,9 @@
     "dataerror": "Une erreur de données s'est produite. Réessayez.",
     "onlyuser": "Seul l'utilisateur qui a lancé la lecture peut utiliser ce bouton.",
     "volumeinvalid": "Donnez un nombre entier entre 1 et 100.",
-    "agerestricted": "Cette vidéo est restreinte ou indisponible. Utilisez un salon NSFW ou définissez YOUTUBE_COOKIE.",
-    "ytbotcheck": "YouTube a bloqué le flux (contrôle anti-bot). C'est la panne commencée en 2023. Ajoutez un YOUTUBE_COOKIE connecté puis redémarrez.",
-    "ytratelimit": "YouTube a limité ce serveur. Attendez quelques minutes ou ajoutez YOUTUBE_COOKIE.",
+    "agerestricted": "Cette vidéo est restreinte ou indisponible. Essayez un autre lien.",
+    "ytbotcheck": "YouTube a refusé cette vidéo. Essayez le titre ou un autre lien.",
+    "ytratelimit": "YouTube est occupé. Attendez une minute et réessayez.",
     "ffmpeg": "FFmpeg est absent. Installez-le ou définissez FFMPEG_PATH.",
     "unknowncommand": "Commande inconnue.",
     "commandfailed": "La commande a échoué."
@@ -55,5 +55,23 @@
     "empty_desc": "Tout le monde est parti, je quitte le salon.",
     "standard": "Aucun",
     "unknown": "Inconnu"
+  },
+  "help": {
+    "title": "Commandes",
+    "intro": "Rien d'autre à configurer. Rejoignez un salon vocal et envoyez un titre ou un lien YouTube.",
+    "usage": "Exemples",
+    "examples": "`/play Duman Senden Daha Güzel`\n`/play https://youtu.be/dQw4w9WgXcQ`\n`/play https://www.youtube.com/playlist?list=...`",
+    "buttons": "Sur la carte, 🔊 règle le volume et 🌀 boucle le morceau.",
+    "commands": {
+      "play": "Joue un titre, une vidéo YouTube, un Short ou une playlist.",
+      "pause": "Met le morceau en pause.",
+      "resume": "Reprend le morceau.",
+      "skip": "Passe au morceau suivant.",
+      "stop": "Arrête la lecture et vide la file.",
+      "list": "Affiche la file.",
+      "nowplaying": "Affiche le morceau en cours.",
+      "ping": "Affiche la latence.",
+      "help": "Affiche cette liste."
+    }
   }
 }

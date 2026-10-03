@@ -1,7 +1,7 @@
 {
   "name": "musicbotv14",
   "version": "2.0.0",
-  "description": "Discord music bot. Updated for the 2023 YouTube extractor break and current Discord voice (DAVE).",
+  "description": "Discord music bot. Only a Discord token is required.",
   "main": "index.js",
   "engines": {
     "node": ">=22.12.0"
@@ -33,7 +33,6 @@
     "i18next": "^26.4.2",
     "i18next-fs-backend": "^2.6.8",
     "libsodium-wrappers": "^0.8.4",
-    "mongoose": "^8.24.4",
     "opusscript": "^0.0.8",
     "youtubei.js": "^18.1.0"
   }

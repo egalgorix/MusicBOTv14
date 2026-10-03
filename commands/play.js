@@ -3,23 +3,32 @@ const { tr, reply } = require("../lib/reply");
 const { requireGuild } = require("../lib/voice");
 const { songEmbed, controlRow, errorEmbed } = require("../lib/embeds");
 const { remember } = require("../lib/session");
+const { extractPlayable } = require("../plugins/youtube");
 
 module.exports = {
   name: "play",
   usage: "/play <name>",
   category: "Bot",
-  description: "Play a song or playlist.",
+  description: "Play a song name or a YouTube link.",
+  descriptionLocalizations: {
+    tr: "Şarkı adı veya YouTube linki çalar.",
+    fr: "Joue un titre ou un lien YouTube.",
+  },
   options: [
     {
       name: "music_name",
-      description: "Song name or a YouTube, Spotify, SoundCloud or Deezer link",
+      description: "Song name, or a YouTube video, Shorts or playlist link",
+      descriptionLocalizations: {
+        tr: "Şarkı adı ya da YouTube video, Shorts veya çalma listesi linki",
+        fr: "Titre, ou lien YouTube, Shorts ou playlist",
+      },
       type: 3,
       required: true,
     },
   ],
   run: async (client, interaction) => {
     if (!(await requireGuild(interaction))) return;
-    const query = interaction.options.getString("music_name", true).trim();
+    const query = extractPlayable(interaction.options.getString("music_name", true));
     const voiceChannel = interaction.member.voice?.channel;
     if (!voiceChannel) {
       return reply(interaction, { content: tr(interaction, "error.notvoicechannel"), ephemeral: true });

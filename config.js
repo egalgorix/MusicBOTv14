@@ -23,23 +23,16 @@ function loadEnvFile() {
 
 loadEnvFile();
 
-function pick(...values) {
-  return values.find((value) => value !== undefined && value !== null && String(value).trim() !== "");
-}
-
-// Edit these, or set the environment variables in .env.example. Env wins.
+// Sadece bunu doldur. Mongo, YouTube çerezi, Spotify anahtarı yok.
 const fileConfig = {
-  token: "TOKEN",
-  mongodb: "MONGOURL",
+  token: "",
 };
 
-const token = pick(process.env.DISCORD_TOKEN, process.env.TOKEN, fileConfig.token);
-const mongodb = pick(process.env.MONGO_URL, process.env.MONGODB, process.env.MONGOURL, fileConfig.mongodb);
+const token = process.env.DISCORD_TOKEN || process.env.TOKEN || fileConfig.token;
 
 module.exports = {
   token,
-  mongodb,
-  guildId: pick(process.env.GUILD_ID, ""),
+  guildId: process.env.GUILD_ID || "",
   port: Number(process.env.PORT || 3000),
   leaveEmptyDelay: Number(process.env.LEAVE_EMPTY_DELAY || 15000),
   ready: ["Power By FastUptime", "Produced by FastUptime", "www.fastuptime.com"],
@@ -54,21 +47,7 @@ module.exports = {
     text: "2022-2026 FastUptime All Rights Reserved.",
     icon: "https://www.technopat.net/sosyal/data/avatars/o/472/472796.jpg?1648288120",
   },
-  roles: {
-    supporter: "1069586139272458334",
-  },
-  youtube: {
-    cookie: process.env.YOUTUBE_COOKIE || "",
-    client: process.env.YOUTUBE_CLIENT || "WEB",
-    poToken: process.env.YOUTUBE_PO_TOKEN || "",
-    playerId: process.env.YOUTUBE_PLAYER_ID || "",
-  },
 };
 
-function isPlaceholder(value, placeholders) {
-  if (!value) return true;
-  return placeholders.includes(String(value).trim());
-}
-
-module.exports.hasToken = !isPlaceholder(token, ["TOKEN", "your-token", "BOT_TOKEN"]);
-module.exports.hasMongo = !isPlaceholder(mongodb, ["MONGOURL", "your-mongo-url", "mongodb://localhost/placeholder"]);
+const placeholders = new Set(["", "TOKEN", "your-token", "BOT_TOKEN", "MONGOURL"]);
+module.exports.hasToken = !placeholders.has(String(token || "").trim());

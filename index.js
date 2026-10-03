@@ -4,7 +4,6 @@ const {
   ActivityType,
   Events,
 } = require("discord.js");
-const mongoose = require("mongoose");
 const chalk = require("chalk");
 const { DisTube, Events: DisTubeEvents } = require("distube");
 const { SpotifyPlugin } = require("@distube/spotify");
@@ -20,7 +19,6 @@ const { simpleEmbed } = require("./lib/embeds");
 const { forget } = require("./lib/session");
 const { humanListeners } = require("./lib/voice");
 const { t } = require("i18next");
-const Music = require("./models/music");
 
 function localeOf(queue) {
   return queue?.textChannel?.guild?.preferredLocale || "en-US";
@@ -46,11 +44,10 @@ async function main() {
   });
   client.config = config;
   client.nowPlaying = new Map();
-  client.mongoReady = false;
   client.emptyTimers = new Map();
 
   const ffmpegPath = resolveFfmpegPath();
-  const youtube = new YouTubePlugin(config.youtube);
+  const youtube = new YouTubePlugin();
   client.youtube = youtube;
   client.distube = new DisTube(client, {
     emitNewSongOnly: true,
@@ -64,16 +61,7 @@ async function main() {
       youtube,
       new SoundCloudPlugin(),
       new DirectPlugin(),
-      new SpotifyPlugin(
-        process.env.SPOTIFY_CLIENT_ID
-          ? {
-              api: {
-                clientId: process.env.SPOTIFY_CLIENT_ID,
-                clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-              },
-            }
-          : undefined
-      ),
+      new SpotifyPlugin(),
       new DeezerPlugin(),
     ],
   });
@@ -172,9 +160,6 @@ async function main() {
       chalk.bold.magenta("[SlashCommands]:"),
       chalk.bold.blue(`${client.slashCommands.size} commands loaded.`)
     );
-    if (client.mongoReady) {
-      await Music.deleteMany({}).catch((err) => console.error("[mongo]", err.message));
-    }
     const statuses = config.ready;
     setInterval(() => {
       const name = statuses[Math.floor(Math.random() * statuses.length)];
@@ -185,26 +170,10 @@ async function main() {
     }, config.ready_event_loop_time);
   });
 
-  if (config.hasMongo) {
-    mongoose
-      .connect(config.mongodb, { serverSelectionTimeoutMS: 8000 })
-      .then(async () => {
-        client.mongoReady = true;
-        console.log(chalk.bold.yellow("[MongoDB]:"), chalk.bold.blue("connected"));
-        await Music.deleteMany({}).catch((err) => console.error("[mongo]", err.message));
-      })
-      .catch((err) => {
-        client.mongoReady = false;
-        console.log(chalk.hex("#FF0000").bold("[MongoDB]:"), err.message);
-      });
-  } else {
-    console.log(chalk.bold.yellow("[MongoDB]:"), "skipped (no URL). Playback still works.");
-  }
-
   if (!config.hasToken) {
     console.error(
       chalk.hex("#FF0000").bold("[Bot]:"),
-      "Set DISCORD_TOKEN (or config.js token). Placeholder TOKEN will not log in."
+      "config.js içindeki token alanına sadece Discord bot tokenini yaz. Başka anahtar yok."
     );
     youtube.close();
     process.exit(1);
