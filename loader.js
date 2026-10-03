@@ -1,60 +1,63 @@
-const { glob } = require("glob");
-const { promisify } = require("util");
-const globPromise = promisify(glob);
-const path = require("path"); // Path
-const fs = require("fs"); // File System
-const {
-  Client,
-  GatewayIntentBits,
-  Partials,
-  Collection,
-  Discord,
-} = require("discord.js"); // Discord.js V14
-const config = require("./config.js"); // Config
+const fs = require("fs");
+const path = require("path");
+const { Collection, InteractionContextType, ApplicationIntegrationType } = require("discord.js");
+const { tr } = require("./lib/reply");
 
-module.exports = function (client) {
-  client.discord = Discord;
+module.exports = function loadCommands(client) {
   client.commands = new Collection();
   client.slashCommands = new Collection();
 
-  client.on("interactionCreate", async (interaction) => {
-    if (interaction.isCommand()) {
-      const command = client.slashCommands.get(interaction.commandName);
-      if (!command) return interaction.followUp({ content: "an Erorr" });
+  const dir = path.join(__dirname, "commands");
+  const files = fs.readdirSync(dir).filter((file) => file.endsWith(".js"));
+  const payload = [];
 
-      const args = [];
+  for (const file of files) {
+    const command = require(path.join(dir, file));
+    if (!command?.name || typeof command.run !== "function") continue;
+    client.slashCommands.set(command.name, command);
+    payload.push({
+      name: command.name,
+      description: String(command.description || "Music command").slice(0, 100),
+      options: command.options,
+      dmPermission: false,
+      contexts: [InteractionContextType.Guild],
+      integrationTypes: [ApplicationIntegrationType.GuildInstall],
+    });
+  }
 
-      for (let option of interaction.options.data) {
-        if (option.type === "SUB_COMMAND") {
-          if (option.name) args.push(option.name);
-          option.options?.forEach((x) => {
-            if (x.value) args.push(x.value);
-          });
-        } else if (option.value) args.push(option.value);
+  client.once("clientReady", async () => {
+    try {
+      if (client.config.guildId) {
+        const guild = await client.guilds.fetch(client.config.guildId);
+        await guild.commands.set(payload);
+      } else {
+        await client.application.commands.set(payload);
       }
-      try {
-        command.run(client, interaction, config);
-      } catch (e) {
-        interaction.followUp({ content: e.message });
-      }
+      console.log(`[SlashCommands] ${payload.length} commands registered.`);
+    } catch (err) {
+      console.error("[SlashCommands]", err);
     }
   });
 
-  handler(client);
-  async function handler(client) {
-    const slashCommands = await globPromise(`${process.cwd()}/commands/*.js`);
-
-    const arrayOfSlashCommands = [];
-    slashCommands.map((value) => {
-      const file = require(value);
-      if (!file.name) return;
-      client.slashCommands.set(file.name, file);
-      arrayOfSlashCommands.push(file);
-    });
-    client.on("ready", async () => {
-      await client.application.commands
-        .set(arrayOfSlashCommands)
-        .catch(console.error);
-    });
-  }
+  client.on("interactionCreate", async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+    const command = client.slashCommands.get(interaction.commandName);
+    if (!command) {
+      await interaction
+        .reply({ content: tr(interaction, "error.unknowncommand"), ephemeral: true })
+        .catch(() => {});
+      return;
+    }
+    try {
+      await command.run(client, interaction, client.config);
+    } catch (err) {
+      console.error(`[command:${command.name}]`, err);
+      const body = { content: tr(interaction, "error.commandfailed"), ephemeral: true };
+      if (interaction.deferred || interaction.replied) {
+        await interaction.followUp(body).catch(() => {});
+      } else {
+        await interaction.reply(body).catch(() => {});
+      }
+    }
+  });
 };

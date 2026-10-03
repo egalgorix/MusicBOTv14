@@ -1,554 +1,223 @@
-(async () => {
-  const {
-    Client,
-    GatewayIntentBits,
-    Partials,
-    Collection,
-    Discord,
-    EmbedBuilder,
-    ActionRowBuilder,
-    ButtonBuilder,
-    ButtonStyle,
-    Events,
-    ActivityType,
-    TextInputStyle,
-    TextInputBuilder,
-    ModalBuilder,
-    InteractionType,
-  } = require("discord.js"); // Discord.js V14
-  const { default: mongoose } = require("mongoose"); // Mongoose
-  const chalk = require("chalk");
-  const config = require("./config.js"); // Config
-  const i18next = require("i18next"); // i18next
-  const { t } = require("i18next"); // i18next Translate
-  const translationBackend = require("i18next-fs-backend"); // i18next-fs-backend
-  const { readdirSync } = require("fs");
-  const moment = require("moment"); // Moment
-  const timezones = require("moment-timezone"); // Moment Timezone
-  const { REST } = require("@discordjs/rest"); // Discord.js REST
-  const { Routes } = require("discord-api-types/v10"); // Discord.js Routes
-  const { DisTube } = require("distube"); // DisTube
-  const { SpotifyPlugin } = require("@distube/spotify"); // DisTube Spotify Plugin
-  const { SoundCloudPlugin } = require("@distube/soundcloud"); // DisTube SoundCloud Plugin
-  const { YtDlpPlugin } = require("@distube/yt-dlp"); // DisTube YtDlp Plugin
-  const { Player } = require("discord-player"); // Discord Player
-  const music_mongo = require("./models/music.js"); // Music Model
+const {
+  Client,
+  GatewayIntentBits,
+  ActivityType,
+  Events,
+} = require("discord.js");
+const mongoose = require("mongoose");
+const chalk = require("chalk");
+const { DisTube, Events: DisTubeEvents } = require("distube");
+const { SpotifyPlugin } = require("@distube/spotify");
+const { SoundCloudPlugin } = require("@distube/soundcloud");
+const { DeezerPlugin } = require("@distube/deezer");
+const config = require("./config");
+const { initI18n } = require("./lib/i18n");
+const { resolveFfmpegPath } = require("./lib/ffmpeg");
+const { YouTubePlugin } = require("./plugins/youtube");
+const { DirectPlugin } = require("./plugins/direct");
+const { startHealthServer } = require("./server");
+const { simpleEmbed } = require("./lib/embeds");
+const { forget } = require("./lib/session");
+const { humanListeners } = require("./lib/voice");
+const { t } = require("i18next");
+const Music = require("./models/music");
+
+function localeOf(queue) {
+  return queue?.textChannel?.guild?.preferredLocale || "en-US";
+}
+
+function announce(queue, titleKey, descriptionKey, color) {
+  const channel = queue?.textChannel;
+  if (!channel) return;
+  const lng = localeOf(queue);
+  const embed = simpleEmbed(
+    t(titleKey, { ns: "common", lng }),
+    t(descriptionKey, { ns: "common", lng }),
+    color
+  );
+  channel.send({ embeds: [embed] }).catch((err) => console.error("[announce]", err.message));
+}
+
+async function main() {
+  await initI18n();
+
   const client = new Client({
-    intents: [
-      GatewayIntentBits.Guilds,
-      GatewayIntentBits.GuildMessages,
-      GatewayIntentBits.GuildPresences,
-      GatewayIntentBits.DirectMessages,
-      GatewayIntentBits.MessageContent,
-      GatewayIntentBits.DirectMessageReactions,
-      GatewayIntentBits.GuildMembers,
-      GatewayIntentBits.GuildMessageReactions,
-      GatewayIntentBits.GuildWebhooks,
-      GatewayIntentBits.GuildVoiceStates,
-      GatewayIntentBits.GuildInvites,
-      GatewayIntentBits.GuildBans,
-    ],
-  }); // Client
-  const player = new Player(client);
-  client.player = player;
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
+  });
+  client.config = config;
+  client.nowPlaying = new Map();
+  client.mongoReady = false;
+  client.emptyTimers = new Map();
+
+  const ffmpegPath = resolveFfmpegPath();
+  const youtube = new YouTubePlugin(config.youtube);
+  client.youtube = youtube;
   client.distube = new DisTube(client, {
-    leaveOnStop: false,
-    leaveOnEmpty: true,
-    leaveOnFinish: true,
     emitNewSongOnly: true,
     emitAddSongWhenCreatingQueue: false,
     emitAddListWhenCreatingQueue: false,
+    joinNewVoiceChannel: false,
+    nsfw: false,
+    savePreviousSongs: true,
+    ffmpeg: { path: ffmpegPath },
     plugins: [
-      new SpotifyPlugin({
-        emitEventsAfterFetching: true,
-      }),
+      youtube,
       new SoundCloudPlugin(),
-      new YtDlpPlugin(),
+      new DirectPlugin(),
+      new SpotifyPlugin(
+        process.env.SPOTIFY_CLIENT_ID
+          ? {
+              api: {
+                clientId: process.env.SPOTIFY_CLIENT_ID,
+                clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+              },
+            }
+          : undefined
+      ),
+      new DeezerPlugin(),
     ],
   });
-  require("./loader.js")(client); // Loader
 
-  mongoose
-    .connect(config.mongodb, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
-    .then(() => {
-      console.log(
-        chalk.bold.yellow(`[MongoDB]:`),
-        chalk.bold.blue(`MongoDB Database Connected!`)
-      );
-    })
-    .catch((err) => {
-      console.log(
-        chalk.hex("#FF0000").bold(`[MongoDB]:`),
-        chalk.bold.blue(`MongoDB Database Connection Failed! Error: ${err}`)
-      );
-    }); // MongoDB Connection
-  client
-    .login(config.token)
-    .then(() => {
-      console.log(
-        chalk.hex("#067A00").bold(`[Bot]:`),
-        chalk.bold.blue(`${client.user.tag} Login Succesfully`)
-      ); // Giriş başarılıysa bot aktif olur.
-    })
-    .catch((err) => {
-      console.log(chalk.hex("#FF0000").bold(`Entry failed!${err}`)); // Giriş başarısızsa hata verir.
-    });
+  require("./loader")(client);
+  require("./handlers/controls")(client);
+  startHealthServer(client, config);
 
-  // Initialize multi language system
-  i18next.use(translationBackend).init({
-    ns: readdirSync("./locales/en-US").map((a) => a.replace(".json", "")),
-    defaultNS: "commands",
-    fallbackLng: "en-US",
-    preload: readdirSync("./locales"),
-    backend: {
-      loadPath: "./locales/{{lng}}/{{ns}}.json",
-    },
-  }); // i18next
+  client.distube.on(DisTubeEvents.INIT_QUEUE, (queue) => {
+    queue.autoplay = false;
+  });
 
-  client.on("ready", async () => {
-    client.guilds.cache.filter(async (guild) => {
-      const data = await music_mongo.find({});
-      if (!data) return;
-      await music_mongo.remove({}).catch((err) => {});
-    });
+  client.distube.on(DisTubeEvents.PLAY_SONG, (queue, song) => {
+    if (!queue.previousSongs.length) return;
+    const lng = localeOf(queue);
+    const embed = simpleEmbed(
+      t("music.nowplaying", { ns: "common", lng }),
+      `**[${song.name}](${song.url})**\n${song.formattedDuration || ""}`,
+      config.embed.success
+    );
+    if (song.thumbnail) embed.setThumbnail(song.thumbnail);
+    queue.textChannel?.send({ embeds: [embed] }).catch(() => {});
+  });
 
+  client.distube.on(DisTubeEvents.FINISH, (queue) => {
+    try {
+      queue.voice?.leave();
+    } catch (err) {
+      console.error("[finish]", err.message);
+    }
+    announce(queue, "music.finished_title", "music.finished_desc", config.embed.info);
+    forget(client, queue.id);
+  });
+
+  client.distube.on(DisTubeEvents.DISCONNECT, (queue) => {
+    const timer = client.emptyTimers.get(queue.id);
+    if (timer) clearTimeout(timer);
+    client.emptyTimers.delete(queue.id);
+    forget(client, queue.id);
+  });
+
+  client.distube.on(DisTubeEvents.ERROR, (error, queue) => {
+    console.error("[DisTube]", error);
+    const channel = queue?.textChannel;
+    if (!channel) return;
+    const lng = localeOf(queue);
+    const code = error?.errorCode || error?.code || "";
+    const key =
+      code === "YT_BOT_CHECK"
+        ? "error.ytbotcheck"
+        : code === "YT_RATELIMIT"
+          ? "error.ytratelimit"
+          : code === "FFMPEG_NOT_INSTALLED"
+            ? "error.ffmpeg"
+            : "error.musicerrordescription";
+    const embed = simpleEmbed(
+      t("error.musicerrortitle", { ns: "common", lng }),
+      t(key, { ns: "common", lng }),
+      config.embed.error
+    );
+    channel.send({ embeds: [embed] }).catch(() => {});
+  });
+
+  if (process.env.DEBUG) {
+    client.distube.on(DisTubeEvents.DEBUG, (message) => console.log(chalk.gray(`[debug] ${message}`)));
+    client.distube.on(DisTubeEvents.FFMPEG_DEBUG, (message) => console.log(chalk.gray(`[ffmpeg] ${message}`)));
+  }
+
+  client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+    const guild = oldState.guild || newState.guild;
+    const botChannel = client.distube.voices.get(guild.id)?.channel;
+    if (!botChannel) return;
+    if (oldState.channelId !== botChannel.id && newState.channelId !== botChannel.id) return;
+    if (humanListeners(botChannel) > 0) {
+      const pending = client.emptyTimers.get(guild.id);
+      if (pending) clearTimeout(pending);
+      client.emptyTimers.delete(guild.id);
+      return;
+    }
+    if (client.emptyTimers.has(guild.id)) return;
+    const timer = setTimeout(() => {
+      client.emptyTimers.delete(guild.id);
+      const still = client.distube.voices.get(guild.id)?.channel;
+      if (!still || humanListeners(still) > 0) return;
+      const queue = client.distube.getQueue(guild.id);
+      if (queue) announce(queue, "music.empty_title", "music.empty_desc", config.embed.warning);
+      client.distube.voices.leave(guild.id);
+      queue?.stop().catch(() => {});
+    }, config.leaveEmptyDelay);
+    client.emptyTimers.set(guild.id, timer);
+  });
+
+  client.once(Events.ClientReady, async () => {
+    console.log(chalk.hex("#067A00").bold("[Bot]:"), chalk.bold.blue(`${client.user.username} ready`));
     console.log(
-      chalk.bold.magenta(`[SlashCommands]:`),
+      chalk.bold.magenta("[SlashCommands]:"),
       chalk.bold.blue(`${client.slashCommands.size} commands loaded.`)
-    ); // Slash Commands
-    var status = config.ready; // Ready Status
-    setInterval(function () {
-      client.user.setActivity(
-        ` ${status[Math.floor(Math.random() * status.length)]}`,
-        {
-          type: ActivityType.Listening,
-        }
-      );
-    }, config.ready_event_loop_time); // Ready Event Loop Time (ms) 5000ms = 5s
-  }); // Ready Event
+    );
+    if (client.mongoReady) {
+      await Music.deleteMany({}).catch((err) => console.error("[mongo]", err.message));
+    }
+    const statuses = config.ready;
+    setInterval(() => {
+      const name = statuses[Math.floor(Math.random() * statuses.length)];
+      client.user.setPresence({
+        activities: [{ name, type: ActivityType.Listening }],
+        status: "online",
+      });
+    }, config.ready_event_loop_time);
+  });
 
-  client.distube.on("finish", async (queue) => {
-    client.guilds.cache.filter(async (guild) => {
-      const data = await music_mongo.findOne({ guildId: guild.id });
-      if (!data) return;
-      const message = data.interactionId;
-      const channels = data.channelId;
-      const channel = guild.channels.cache.get(channels);
-      const finished = new EmbedBuilder()
-        .setTitle("Song Finished!")
-        .setDescription("You can use the /play command to start a new song")
-        .setFooter({
-          text: `${config.footer.text}`,
-          iconURL: `${config.footer.icon}`,
-        });
-
-        channel.send({ embeds: [finished], components: [] })
-            .catch((err) => {});
-  
-    });
-  }); // DisTube Finish Event
-
-  client.distube.on("empty", async (queue) => {
-    const data = await music_mongo.findOne({ guildId: queue.id });
-    if (!data) return;
-    const empty = new EmbedBuilder()
-      .setTitle("Hey!")
-      .setDescription("Channel is empty. Leaving the channel")
-      .setFooter({
-        text: `${config.footer.text}`,
-        iconURL: `${config.footer.icon}`,
+  if (config.hasMongo) {
+    mongoose
+      .connect(config.mongodb, { serverSelectionTimeoutMS: 8000 })
+      .then(async () => {
+        client.mongoReady = true;
+        console.log(chalk.bold.yellow("[MongoDB]:"), chalk.bold.blue("connected"));
+        await Music.deleteMany({}).catch((err) => console.error("[mongo]", err.message));
       })
-      .setColor(config.embed.error);
-    const channelleave = client.channels.cache.get(data.channelId);
-    channelleave.send({ embeds: [empty] }).catch((err) => {});
-  }); // DisTube Empty Event
-
-  client.distube.on("error", (channel, e) => {
-    if (channel) channel.send(`An error encountered: ${e}`);
-    else console.error(e);
-  });
-  client.distube.on("searchCancel", (interaction) => {
-    const cancelsearch = new EmbedBuilder()
-      .setTitle("Cancelled!")
-      .setDescription("Searching canceled, Please try Again.")
-      .setFooter({
-        text: `${config.footer.text}`,
-        iconURL: `${config.footer.icon}`,
-      })
-      .setColor(config.embed.error);
-    interaction.channel.send({ embeds: [cancelsearch] }).catch((err) => {});
-  });
-  client.distube.on("searchInvalidAnswer", (message) => {
-    message.channel.send(`You answered an invalid number!`).catch((err) => {});
-  });
-  client.distube.on("searchNoResult", (message, query) => {
-    message.channel.send(`No result found for ${query}!`).catch((err) => {});
-  });
-
-  //Volume Play commands Volume
-  client.on("interactionCreate", async (interaction) => {
-    if (interaction.isButton()) {
-      if (interaction.customId == "volume") {
-        const modalvolume = new ModalBuilder()
-          .setCustomId("formvolume")
-          .setTitle("Set Volume");
-        const a1 = new TextInputBuilder()
-          .setCustomId("setvolume")
-          .setLabel("Volume")
-          .setStyle(TextInputStyle.Paragraph)
-          .setMinLength(1)
-          .setPlaceholder("1 - 100")
-          .setRequired(true);
-
-        const row = new ActionRowBuilder().addComponents(a1);
-
-        modalvolume.addComponents(row);
-        await interaction.showModal(modalvolume)
-      }
-    }
-  });
-
-  client.on("interactionCreate", async (interaction) => {
-    if (interaction.type !== InteractionType.ModalSubmit) return;
-    if (interaction.customId === "formvolume") {
-      const string = interaction.fields.getTextInputValue("setvolume");
-      const volume = parseInt(string);
-      const queue = client.distube.getQueue(interaction);
-      if (!queue)
-        return interaction
-          .reply(`There is no song on the list yet.`)
-          .catch((err) => {});
-      if (isNaN(volume))
-        return interaction.reply("Give me number!").catch((err) => {});
-      if (volume < 1)
-        return interaction
-          .reply("The number must not be less than 1.")
-          .catch((err) => {});
-      if (volume > 100)
-        return interaction
-          .reply("The number should not be greater than 100.")
-          .catch((err) => {});
-      client.distube.setVolume(interaction, volume)
-      interaction
-        .reply("Successfully set the volume of the music to **" + volume + "**")
-        .catch((err) => {});
-    }
-  });
-//Play Command Volume
-
-
-
-//Skip Command Volume
-client.on("interactionCreate", async (interaction) => {
-  if (interaction.isButton()) {
-    if (interaction.customId == "volumes") {
-      const modalvolume = new ModalBuilder()
-        .setCustomId("formvolumes")
-        .setTitle("Set Volume");
-      const a1 = new TextInputBuilder()
-        .setCustomId("setvolumes")
-        .setLabel("Volume")
-        .setStyle(TextInputStyle.Paragraph)
-        .setMinLength(1)
-        .setPlaceholder("1 - 100")
-        .setRequired(true);
-
-      const row = new ActionRowBuilder().addComponents(a1);
-
-      modalvolume.addComponents(row);
-      await interaction.showModal(modalvolume)
-    }
+      .catch((err) => {
+        client.mongoReady = false;
+        console.log(chalk.hex("#FF0000").bold("[MongoDB]:"), err.message);
+      });
+  } else {
+    console.log(chalk.bold.yellow("[MongoDB]:"), "skipped (no URL). Playback still works.");
   }
-});
 
-client.on("interactionCreate", async (interaction) => {
-  if (interaction.type !== InteractionType.ModalSubmit) return;
-  if (interaction.customId === "formvolumes") {
-    const string = interaction.fields.getTextInputValue("setvolumes");
-    const volume = parseInt(string);
-    const queue = client.distube.getQueue(interaction);
-    if (!queue)
-      return interaction
-        .reply(`There is no song on the list yet.`)
-        .catch((err) => {});
-    if (isNaN(volume))
-      return interaction.reply("Give me number!").catch((err) => {});
-    if (volume < 1)
-      return interaction
-        .reply("The number must not be less than 1.")
-        .catch((err) => {});
-    if (volume > 100)
-      return interaction
-        .reply("The number should not be greater than 100.")
-        .catch((err) => {});
-    client.distube.setVolume(interaction, volume)
-    interaction
-      .reply("Successfully set the volume of the music to **" + volume + "**")
-      .catch((err) => {});
+  if (!config.hasToken) {
+    console.error(
+      chalk.hex("#FF0000").bold("[Bot]:"),
+      "Set DISCORD_TOKEN (or config.js token). Placeholder TOKEN will not log in."
+    );
+    youtube.close();
+    process.exit(1);
   }
-});
-//Skip Command Volume
 
-//Loop Command Play
-client.on("interactionCreate",async (interaction) => {
-  if (interaction.customId === "loop") {
-    const queue = client.distube.getQueue(interaction);
-       if (!queue) return interaction.reply(`${t("error.nosonglist", {
-        ns: "common",
-        lng: interaction.locale,
-      })}`)
-    let data = await music_mongo.findOne({ guildId: interaction.guild.id });
-    if (!data) return interaction.reply({content: `${t("error.dataerror", {
-      ns: "common",
-      lng: interaction.locale,
-    })}`, ephemeral: true})
-    let userr = data.userId
-    if (interaction.user.id !== userr) return interaction.reply({content: `${t("error.onlyuser", {
-      ns: "common",
-      lng: interaction.locale,
-    })}`, ephemeral: true})
-  const title = data.title
-  const author = data.uploader
-  const time = data.time
-  const view = data.views
-  const thumb = data.thumbnail
-  const url = data.video
-  
-  const views = view;
-  function formatNumber(views) {
-    if (views >= 1000000000) {
-      return (views / 1000000000).toFixed(1) + "B";
-    } else if (views >= 1000000) {
-      return (views / 1000000).toFixed(1) + "M";
-    } else if (views >= 1000) {
-      return (views / 1000).toFixed(1) + "K";
-    }
-    return views;
-  }
-if (queue.repeatMode === 0) {
-  const embed = new EmbedBuilder()
-  .setTitle(
-    `${t("succes.songloopon", {
-      ns: "common",
-      lng: interaction.locale,
-    })}`
-  )
-  .setDescription(`**[${queue.songs[0].name}](${queue.songs[0].url})**`)
-  .addFields(
-    {
-      name: `${t("music.author", {
-        ns: "common",
-        lng: interaction.locale,
-      })}:`,
-      value: `[${queue.songs[0].uploader.name}](${queue.songs[0].uploader.url})`,
-      inline: true,
-    },
-    {
-      name: `${t("music.time", {
-        ns: "common",
-        lng: interaction.locale,
-      })}:`,
-      value: ` **[${queue.songs[0].formattedDuration}]**`,
-      inline: false,
-    }
-  )
-  .setImage(
-    `${
-      queue.songs[0].thumbnail ||
-      "https://www.technopat.net/sosyal/data/avatars/o/472/472796.jpg?1648288120"
-    }`
-  )
-  
-  .setColor(config.embed.success)
-  .setFooter({
-    text: `${config.footer.text}`,
-    iconURL: `${config.footer.icon}`,
-  });
-  
-  client.distube.setRepeatMode(interaction, 1)
-  return interaction.reply({embeds: [embed]}).catch((err) => {});
-  } else if(queue.repeatMode === 1) {
-    const embed = new EmbedBuilder()
-    .setTitle(
-      `${t("succes.songloopoff", {
-        ns: "common",
-        lng: interaction.locale,
-      })}`
-    )
-    .setDescription(`**[${queue.songs[0].name}](${queue.songs[0].url})**`)
-    .addFields(
-      {
-        name: `${t("music.author", {
-          ns: "common",
-          lng: interaction.locale,
-        })}:`,
-        value: `[${queue.songs[0].uploader.name}](${queue.songs[0].uploader.url})`,
-        inline: true,
-      },
-      {
-        name: `${t("music.time", {
-          ns: "common",
-          lng: interaction.locale,
-        })}:`,
-        value: ` **[${queue.songs[0].formattedDuration}]**`,
-        inline: false,
-      }
-    )
-    .setImage(
-      `${
-        queue.songs[0].thumbnail ||
-        "https://www.technopat.net/sosyal/data/avatars/o/472/472796.jpg?1648288120"
-      }`
-    )
-    
-    .setColor(config.embed.error)
-    .setFooter({
-      text: `${config.footer.text}`,
-      iconURL: `${config.footer.icon}`,
-    });
-    
-    client.distube.setRepeatMode(interaction, 0)
-    return interaction.reply({embeds: [embed]}).catch((err) => {});
-  }
+  await client.login(config.token);
 }
-});
-//Loop Command Play
 
-//Loop Command Skip
-client.on("interactionCreate", async (interaction) => {
-  if (interaction.customId === "loops") {
-    const queue = client.distube.getQueue(interaction);
-       if (!queue) return interaction.reply(`${t("error.nosonglist", {
-        ns: "common",
-        lng: interaction.locale,
-      })}`)
-    let data = await music_mongo.findOne({ guildId: interaction.guild.id });
-    if (!data) return interaction.reply({content: `${t("error.dataerror", {
-      ns: "common",
-      lng: interaction.locale,
-    })}`, ephemeral: true})
-    let userr = data.userId
-    if (interaction.user.id !== userr) return interaction.reply({content: `${t("error.onlyuser", {
-      ns: "common",
-      lng: interaction.locale,
-    })}`, ephemeral: true})
-  const title = data.title
-  const author = data.uploader
-  const time = data.time
-  const view = data.views
-  const thumb = data.thumbnail
-  const url = data.video
-  
-  const views = view;
-  function formatNumber(views) {
-    if (views >= 1000000000) {
-      return (views / 1000000000).toFixed(1) + "B";
-    } else if (views >= 1000000) {
-      return (views / 1000000).toFixed(1) + "M";
-    } else if (views >= 1000) {
-      return (views / 1000).toFixed(1) + "K";
-    }
-    return views;
-  }
-if (queue.repeatMode === 0) {
-  const embed = new EmbedBuilder()
-  .setTitle(
-    `${t("succes.songloopon", {
-      ns: "common",
-      lng: interaction.locale,
-    })}`
-  )
-  .setDescription(`**[${queue.songs[0].name}](${queue.songs[0].url})**`)
-  .addFields(
-    {
-      name: `${t("music.author", {
-        ns: "common",
-        lng: interaction.locale,
-      })}:`,
-      value: `[${queue.songs[0].uploader.name}](${queue.songs[0].uploader.url})`,
-      inline: true,
-    },
-    {
-      name: `${t("music.time", {
-        ns: "common",
-        lng: interaction.locale,
-      })}:`,
-      value: ` **[${queue.songs[0].formattedDuration}]**`,
-      inline: false,
-    }
-  )
-  .setImage(
-    `${
-      queue.songs[0].thumbnail ||
-      "https://www.technopat.net/sosyal/data/avatars/o/472/472796.jpg?1648288120"
-    }`
-  )
-  
-  .setColor(config.embed.success)
-  .setFooter({
-    text: `${config.footer.text}`,
-    iconURL: `${config.footer.icon}`,
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
   });
-  
-  client.distube.setRepeatMode(interaction, 1)
-  return interaction.reply({embeds: [embed]}).catch((err) => {});
-  } else if(queue.repeatMode === 1) {
-    const embed = new EmbedBuilder()
-    .setTitle(
-      `${t("succes.songloopoff", {
-        ns: "common",
-        lng: interaction.locale,
-      })}`
-    )
-    .setDescription(`**[${queue.songs[0].name}](${queue.songs[0].url})**`)
-    .addFields(
-      {
-        name: `${t("music.author", {
-          ns: "common",
-          lng: interaction.locale,
-        })}:`,
-        value: `[${queue.songs[0].uploader.name}](${queue.songs[0].uploader.url})`,
-        inline: true,
-      },
-      {
-        name: `${t("music.time", {
-          ns: "common",
-          lng: interaction.locale,
-        })}:`,
-        value: ` **[${queue.songs[0].formattedDuration}]**`,
-        inline: false,
-      }
-    )
-    .setImage(
-      `${
-        queue.songs[0].thumbnail ||
-        "https://www.technopat.net/sosyal/data/avatars/o/472/472796.jpg?1648288120"
-      }`
-    )
-    
-    .setColor(config.embed.error)
-    .setFooter({
-      text: `${config.footer.text}`,
-      iconURL: `${config.footer.icon}`,
-    });
-    
-    client.distube.setRepeatMode(interaction, 0)
-    return interaction.reply({embeds: [embed]}).catch((err) => {});
-  }
 }
-});
-//Loop Command SKip
-})();
 
-/* Powered by:
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃          F a s t - U p t i m e           ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
------- Developed by Egehan#7658 ------
-https://github.com/egehan0250
-https://www.linkedin.com/in/egehan-konta%C5%9F-a91986250
-https://stackoverflow.com/users/18989055/egehan
-*/
+module.exports = { main };

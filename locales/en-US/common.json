@@ -1,28 +1,40 @@
 {
   "error": {
-    "dmerror": "You cannot use this command via DM.",
-    "notvoicechannel": "You are not on an audio channel!",
-    "nosonglist": "There is no song in the list yet.",
+    "dmerror": "You cannot use this command in DMs.",
+    "notvoicechannel": "Join a voice channel first.",
+    "notsamechannel": "You have to be in the same voice channel as the bot.",
+    "botnoperm": "I need Connect and Speak in that voice channel.",
+    "nosonglist": "There is no song in the queue yet.",
+    "musicalreadystoped": "The music is already paused.",
     "musicalreadyplaying": "Music is already playing.",
     "musicerrortitle": "Error",
-    "musicerrordescription": "There was an Error Playing Music Please Try Typing the Full Name of the Song.",
-    "nosongqueue": "No songs found in the queue",
+    "musicerrordescription": "Could not play that. Try the full song name or a direct link.",
+    "noresult": "No results. Try the full song name or a link.",
+    "nosongqueue": "There is no next song in the queue.",
     "dataerror": "A data error occurred. Please try again.",
-    "onlyuser": "This button is only available to the person who typed the command."
+    "onlyuser": "Only the person who started playback can use this button.",
+    "volumeinvalid": "Give me a whole number from 1 to 100.",
+    "agerestricted": "That video is age-restricted or unavailable. Use an NSFW channel, or set YOUTUBE_COOKIE.",
+    "ytbotcheck": "YouTube blocked the stream with a bot check. This is the break that started in 2023. Add a logged-in YOUTUBE_COOKIE and restart.",
+    "ytratelimit": "YouTube rate-limited this server. Wait a few minutes or add YOUTUBE_COOKIE.",
+    "ffmpeg": "FFmpeg is missing. Install it or set FFMPEG_PATH.",
+    "unknowncommand": "Unknown command.",
+    "commandfailed": "Command failed."
   },
   "succes": {
-    "musicresummed": "Şarkınız başarıyla yeniden açıldı.",
-    "tracksplayed": "Müzik Başlatıldı.",
-    "musicalreadystoped": "The music has already stopped.",
-    "musicstopped": "Your song was successfully finished.",
-    "musicpaused": "Your song was successfully paused.",
-    "songskipsucces": "Song passed successfully.",
-    "songloopon": "Song loop successfully opened.",
-    "songloopoff": "Song loop closed successfully."
+    "musicresummed": "Resumed.",
+    "tracksplayed": "Playing.",
+    "musicstopped": "Stopped.",
+    "musicpaused": "Paused.",
+    "songskipsucces": "Skipped.",
+    "songloopon": "Song loop is on.",
+    "songloopoff": "Song loop is off.",
+    "volumeset": "Volume set to **{{volume}}**.",
+    "added": "Added to the queue."
   },
   "permission": {
-    "missing_permissions": "You need to have `{{permission}}` permissions to use this command.",
-    "missing_role": "You need to have the `{{role}}` role to use this command."
+    "missing_permissions": "You need `{{permission}}` to use this command.",
+    "missing_role": "You need the `{{role}}` role to use this command."
   },
   "music": {
     "title": "Title",
@@ -30,6 +42,18 @@
     "time": "Time",
     "views": "Views",
     "thumbnail": "Thumbnail",
-    "video": "Video"
+    "video": "Video",
+    "volume": "Volume",
+    "filters": "Filters",
+    "likes": "Likes",
+    "progress": "Progress",
+    "queue": "Queue",
+    "nowplaying": "Now playing",
+    "finished_title": "Queue finished",
+    "finished_desc": "Nothing left to play. Use /play to start something new.",
+    "empty_title": "Voice channel empty",
+    "empty_desc": "Everyone left, so I left the channel.",
+    "standard": "Off",
+    "unknown": "Unknown"
   }
 }

@@ -1,50 +1,34 @@
-const { EmbedBuilder, PermissionsBitField } = require("discord.js");
-const Discord = require("discord.js");
-const { t } = require("i18next"); // i18next
-const config = require("../config.js"); // config
+const { EmbedBuilder } = require("discord.js");
+const config = require("../config");
+const { tr, reply } = require("../lib/reply");
+const { requireQueue } = require("../lib/voice");
+const { footer, clip } = require("../lib/embeds");
+
 module.exports = {
   name: "list",
   usage: "/list",
   category: "Bot",
-  description: "List Commands",
+  description: "Show the current queue.",
   run: async (client, interaction) => {
-    await interaction.deferReply().catch((err) => {});
-    const queue = client.distube.getQueue(interaction);
-    if (!queue)
-      return interaction
-        .followUp(
-          `${t("error.nosonglist", {
-            ns: "common",
-            lng: interaction.locale,
-          })}`
-        )
-        .catch((err) => {});
-    if (queue.songs.length === 1)
-      return interaction
-        .followUp(
-          `${t("error.nosongqueue", {
-            ns: "common",
-            lng: interaction.locale,
-          })}`
-        )
-        .catch((err) => {});
-    const list = new EmbedBuilder()
-      .setTitle("Current queue")
-      .setDescription(
-        queue.songs
-          .map(
-            (song, id) =>
-              `**${id + 1}**. [${song.name}](${song.url}) - \`${
-                song.formattedDuration
-              }\``
-          )
-          .join("\n")
-      )
+    const queue = await requireQueue(interaction, { sameChannel: false });
+    if (!queue) return;
+    if (queue.songs.length === 1) return reply(interaction, tr(interaction, "error.nosongqueue"));
+    const lines = queue.songs.slice(0, 25).map((song, index) => {
+      const title = clip(song.name || song.id, 80);
+      const duration = song.formattedDuration || "—";
+      const prefix = index === 0 ? "▶" : `${index + 1}.`;
+      return song.url
+        ? `${prefix} [${title}](${song.url}) \`${duration}\``
+        : `${prefix} ${title} \`${duration}\``;
+    });
+    const hidden = queue.songs.length - lines.length;
+    let description = lines.join("\n");
+    if (hidden > 0) description += `\n… +${hidden}`;
+    const embed = new EmbedBuilder()
+      .setTitle(tr(interaction, "music.queue"))
+      .setDescription(clip(description, 4000))
       .setColor(config.embed.success)
-      .setFooter({
-        text: `${config.footer.text}`,
-        iconURL: `${config.footer.icon}`,
-      });
-    interaction.editReply({ embeds: [list] }).catch((err) => {});
+      .setFooter(footer());
+    return reply(interaction, { embeds: [embed] });
   },
 };

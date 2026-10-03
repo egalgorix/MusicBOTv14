@@ -1,100 +1,49 @@
-const {
-  EmbedBuilder,
-  PermissionsBitField,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
-  InteractionType,
-} = require("discord.js");
-const Discord = require("discord.js");
-const { t } = require("i18next"); // i18next
-const config = require("../config.js");
+const { tr, reply } = require("../lib/reply");
+const { requireQueue } = require("../lib/voice");
+const { simpleEmbed, controlRow } = require("../lib/embeds");
+const config = require("../config");
+
 module.exports = {
   name: "skip",
   usage: "/skip",
   category: "Bot",
-  description: "Skip Commands",
+  description: "Skip the current song.",
   run: async (client, interaction) => {
-    await interaction.deferReply().catch((err) => {});
-    const queue = client.distube.getQueue(interaction);
-    if (!queue)
-      return interaction
-        .followUp(
-          `${t("error.nosonglist", {
-            ns: "common",
-            lng: interaction.locale,
-          })}`
-        )
-        .catch((err) => {});
-    if (queue.songs.length === 1)
-      return interaction
-        .followUp(
-          `${t("error.nosongqueue", {
-            ns: "common",
-            lng: interaction.locale,
-          })}`
-        )
-        .catch((err) => {});
-
-    await client.distube.skip(interaction)
-
-    const part = Math.floor((queue.currentTime / queue.songs[0].duration) * 20);
-    async function message() {
-      const embed = new EmbedBuilder()
-        .setTitle(
-          `${t("succes.songskipsucces", {
-            ns: "common",
-            lng: interaction.locale,
-          })}`
-        )
-        .setDescription(`**[${queue.songs[0].name}](${queue.songs[0].url})**`)
-        .addFields(
-          {
-            name: `${t("music.author", {
-              ns: "common",
-              lng: interaction.locale,
-            })}:`,
-            value: `[${queue.songs[0].uploader.name}](${queue.songs[0].uploader.url})`,
-            inline: true,
-          },
-          {
-            name: `${t("music.time", {
-              ns: "common",
-              lng: interaction.locale,
-            })}:`,
-            value: ` **[${queue.songs[0].formattedDuration}]**`,
-            inline: false,
-          }
-        )
-        .setImage(
-          `${
-            queue.songs[0].thumbnail ||
-            "https://www.technopat.net/sosyal/data/avatars/o/472/472796.jpg?1648288120"
-          }`
-        )
-
-        .setColor(config.embed.success)
-        .setFooter({
-          text: `${config.footer.text}`,
-          iconURL: `${config.footer.icon}`,
-        });
-      const roww = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setEmoji("🔊")
-          .setStyle(ButtonStyle.Secondary)
-          .setCustomId("volumes"),
-          new ButtonBuilder()
-          .setEmoji("🌀")
-          .setStyle(ButtonStyle.Secondary)
-          .setCustomId("loops")
-      );
-      return interaction
-        .followUp({ embeds: [embed], components: [roww] })
-        .catch((err) => {});
+    const queue = await requireQueue(interaction);
+    if (!queue) return;
+    if (queue.songs.length < 2) {
+      return reply(interaction, tr(interaction, "error.nosongqueue"));
     }
-    await setTimeout(message, 1000);
+    await interaction.deferReply();
+    let song;
+    try {
+      song = await queue.skip();
+    } catch (err) {
+      console.error("[skip]", err);
+      return interaction.editReply(tr(interaction, "error.nosongqueue")).catch(() => {});
+    }
+    const embed = simpleEmbed(
+      tr(interaction, "succes.songskipsucces"),
+      song?.url ? `**[${song.name}](${song.url})**` : tr(interaction, "succes.songskipsucces"),
+      config.embed.success
+    );
+    if (song?.uploader?.name) {
+      embed.addFields({
+        name: tr(interaction, "music.author"),
+        value: song.uploader.url ? `[${song.uploader.name}](${song.uploader.url})` : song.uploader.name,
+        inline: true,
+      });
+    }
+    if (song?.formattedDuration) {
+      embed.addFields({
+        name: tr(interaction, "music.time"),
+        value: song.formattedDuration,
+        inline: true,
+      });
+    }
+    if (song?.thumbnail) embed.setImage(song.thumbnail);
+    return interaction
+      .editReply({ embeds: [embed], components: [controlRow("volumes", "loops")] })
+      .catch((err) => console.error("[skip]", err.message));
   },
 };

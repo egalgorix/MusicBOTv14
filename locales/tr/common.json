@@ -1,36 +1,59 @@
 {
   "error": {
-    "dmerror": "Bu komutu DM üzerinden kullanamazsınız.",
-    "notvoicechannel": "Bir ses kanalında değilsiniz!",
+    "dmerror": "Bu komutu DM üzerinden kullanamazsın.",
+    "notvoicechannel": "Önce bir ses kanalına gir.",
+    "notsamechannel": "Botla aynı ses kanalında olmalısın.",
+    "botnoperm": "O ses kanalında Bağlan ve Konuş izinlerine ihtiyacım var.",
     "nosonglist": "Listede henüz bir şarkı yok.",
-    "musicalreadystoped": "Müzik çoktan durdu.",
+    "musicalreadystoped": "Müzik zaten duraklatılmış.",
     "musicalreadyplaying": "Müzik zaten çalıyor.",
     "musicerrortitle": "Hata",
-    "musicerrordescription": "Müzik Çalınırken Bir Hata Oluştu Lütfen Şarkının Tam Adını Yazarak Deneyin.",
-    "nosongqueue": "Kuyrukta şarkı bulunamadı.",
-    "dataerror": "Bir veri hatası oluştu. Lütfen tekrar deneyin.",
-    "onlyuser": "Bu düğmeyi yalnızca komutu yazan kişi kullanabilir."
+    "musicerrordescription": "Şarkı çalınamadı. Tam adını veya doğrudan bağlantıyı dene.",
+    "noresult": "Sonuç yok. Şarkının tam adını veya bir bağlantı dene.",
+    "nosongqueue": "Kuyrukta sıradaki şarkı yok.",
+    "dataerror": "Bir veri hatası oluştu. Lütfen tekrar dene.",
+    "onlyuser": "Bu düğmeyi yalnızca çalmayı başlatan kişi kullanabilir.",
+    "volumeinvalid": "1 ile 100 arasında bir tam sayı yaz.",
+    "agerestricted": "Bu video yaş kısıtlı veya kullanılamıyor. NSFW kanal kullan ya da YOUTUBE_COOKIE ekle.",
+    "ytbotcheck": "YouTube akışı bot kontrolüne takıldı. Bu, 2023'te başlayan kırılma. Giriş yapılmış bir YOUTUBE_COOKIE ekleyip yeniden başlat.",
+    "ytratelimit": "YouTube bu sunucuyu sınırladı. Birkaç dakika bekle ya da YOUTUBE_COOKIE ekle.",
+    "ffmpeg": "FFmpeg yok. Kur ya da FFMPEG_PATH ayarla.",
+    "unknowncommand": "Bilinmeyen komut.",
+    "commandfailed": "Komut çalışmadı."
   },
   "succes": {
-    "musicresummed": "Şarkınız başarıyla yeniden açıldı.",
-    "tracksplayed": "Müzik Başlatıldı.",
-    "musicstopped": "Şarkınız başarıyla bitirildi.",
-    "musicpaused": "Şarkınız başarıyla duraklatıldı.",
-    "musicalreadystoped": "Müzik çoktan durdu.",
-    "songskipsucces": "Şarkı başarıyla geçildi.",
-    "songloopon": "Şarkı döngüsü başarıyla açıldı.",
-    "songloopoff": "Şarkı döngüsü başarıyla kapatıldı."
+    "musicresummed": "Şarkı devam ediyor.",
+    "tracksplayed": "Çalıyor.",
+    "musicstopped": "Durduruldu.",
+    "musicpaused": "Duraklatıldı.",
+    "songskipsucces": "Geçildi.",
+    "songloopon": "Şarkı döngüsü açıldı.",
+    "songloopoff": "Şarkı döngüsü kapandı.",
+    "volumeset": "Ses **{{volume}}** olarak ayarlandı.",
+    "added": "Kuyruğa eklendi."
   },
   "permission": {
-    "missing_permissions": "Bu komutu kullanmak için `{{permission}}` iznine sahip olmalısınız.",
-    "missing_role": "Bu komutu kullanmak için `{{role}}` rolüne sahip olmalısınız."
+    "missing_permissions": "Bu komut için `{{permission}}` izni gerekir.",
+    "missing_role": "Bu komut için `{{role}}` rolü gerekir."
   },
   "music": {
     "title": "Başlık",
-    "author": "Yazar",
-    "time": "Zaman",
+    "author": "Sanatçı",
+    "time": "Süre",
     "views": "İzlenme",
     "thumbnail": "Küçük resim",
-    "video": "Video"
+    "video": "Video",
+    "volume": "Ses",
+    "filters": "Filtre",
+    "likes": "Beğeni",
+    "progress": "İlerleme",
+    "queue": "Kuyruk",
+    "nowplaying": "Şimdi çalıyor",
+    "finished_title": "Kuyruk bitti",
+    "finished_desc": "Çalacak şarkı kalmadı. Yeni bir şarkı için /play kullan.",
+    "empty_title": "Ses kanalı boş",
+    "empty_desc": "Herkes çıktı, ben de kanaldan ayrıldım.",
+    "standard": "Kapalı",
+    "unknown": "Bilinmiyor"
   }
 }

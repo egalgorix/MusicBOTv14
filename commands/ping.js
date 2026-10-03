@@ -1,14 +1,16 @@
 const { EmbedBuilder } = require("discord.js");
-const { t } = require("i18next"); // i18next
+const { t } = require("i18next");
+const { footer } = require("../lib/embeds");
+
 module.exports = {
   name: "ping",
   usage: "/ping",
   category: "Bot",
-  description: "Ping komutu",
-  run: async (client, interaction, config) => {
+  description: "Show bot latency.",
+  run: async (client, interaction) => {
     const embed = new EmbedBuilder()
       .setColor(0x0099ff)
-      .setTitle(`Pong!`)
+      .setTitle("Pong!")
       .addFields(
         {
           name: `${t("ping.discord_latency", { lng: interaction.locale })}:`,
@@ -21,12 +23,7 @@ module.exports = {
           inline: true,
         }
       )
-      .setFooter({
-        text: `${config.footer.text}`,
-        iconURL: `${config.footer.icon}`,
-      });
-    interaction
-      .reply({ embeds: [embed] })
-      .catch((err) => console.log("Hata Oluştu; " + err));
+      .setFooter(footer());
+    return interaction.reply({ embeds: [embed] }).catch((err) => console.error("[ping]", err.message));
   },
 };

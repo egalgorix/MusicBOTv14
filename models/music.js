@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const music = new mongoose.Schema({
-  guildId: String,
+  guildId: { type: String, index: true },
   channelId: String,
   interactionId: String,
   music: String,
@@ -14,4 +14,4 @@ const music = new mongoose.Schema({
   video: String,
 });
 
-const MessageModel = (module.exports = mongoose.model("music", music));
+module.exports = mongoose.models.music || mongoose.model("music", music);
